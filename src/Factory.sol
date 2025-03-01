@@ -24,12 +24,8 @@ contract Factory {
     }
 
     function emitEvent(uint256 value, bytes32 salt) external {
-        address computedAddress = predictProxyAddress(abi.encode(salt), salt);
+        address computedAddress = Clones.predictDeterministicAddressWithImmutableArgs(implementation, abi.encode(salt), salt);
         require(msg.sender == computedAddress, "Only valid proxies can emit events");
         emit MyEvent(computedAddress, value);
-    }
-
-    function predictProxyAddress(bytes memory args, bytes32 salt) public view returns (address) {
-        return Clones.predictDeterministicAddressWithImmutableArgs(implementation, args, salt);
     }
 }
