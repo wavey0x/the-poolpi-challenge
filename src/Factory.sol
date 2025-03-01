@@ -17,10 +17,9 @@ contract Factory {
 
     function deployProxy() external returns (address proxy) {
         // create a salt
-        bytes32 salt = keccak256(abi.encodePacked(saltCounter));
+        bytes32 salt = keccak256(abi.encodePacked(saltCounter++));
         // deploy a proxy with immutable args using create2
         proxy = Clones.cloneDeterministicWithImmutableArgs(implementation, abi.encode(salt), salt);
-        saltCounter++;
     }
 
     function emitEvent(uint256 value, bytes32 salt) external {
