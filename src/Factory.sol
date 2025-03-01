@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract Factory {
-    event MyEvent(uint256 indexed value);
+    event MyEvent(address indexed proxy, uint256 value);
 
     // The implementation contract address that proxies will delegate to
     address public immutable implementation;
@@ -15,34 +15,21 @@ contract Factory {
         implementation = _implementation;
     }
 
-    /**
-     * @dev Deploys a new proxy instance using CREATE2
-     * @param salt The salt value used for CREATE2 and passed as immutable to the proxy
-     * @return proxy The address of the deployed proxy
-     */
     function deployProxy() external returns (address proxy) {
-        // Deploy a new minimal proxy with deterministic address
-
-        proxy = Clones.cloneDeterministic(implementation, keccak256(bytes32(saltCounter)));
-        (bool success, ) = proxy.call(abi.encodeWithSignature("setSalt(bytes32)", salt));
-        require(success, "Initialization failed");
+        // create a salt
+        bytes32 salt = keccak256(abi.encodePacked(saltCounter));
+        // deploy a proxy with immutable args using create2
+        proxy = Clones.cloneDeterministicWithImmutableArgs(implementation, abi.encode(salt), salt);
         saltCounter++;
     }
 
     function emitEvent(uint256 value, bytes32 salt) external {
-        address computedAddress = predictProxyAddress(salt);
+        address computedAddress = predictProxyAddress(abi.encode(salt), salt);
         require(msg.sender == computedAddress, "Only valid proxies can emit events");
-        emit MyEvent(value);
+        emit MyEvent(computedAddress, value);
     }
 
-
-
-    /**
-     * @dev Computes the address where a proxy would be deployed using CREATE2
-     * @param salt The salt to be used in the deployment
-     * @return The predicted address
-     */
-    function predictProxyAddress(bytes32 salt) public view returns (address) {
-        return Clones.predictDeterministicAddress(implementation, salt);
+    function predictProxyAddress(bytes memory args, bytes32 salt) public view returns (address) {
+        return Clones.predictDeterministicAddressWithImmutableArgs(implementation, args, salt);
     }
 }
